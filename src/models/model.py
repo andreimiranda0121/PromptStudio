@@ -11,3 +11,9 @@ class PostSchema(BaseModel):
                            "content" : "some content about animals"
                            }
         }
+
+
+class Model(BaseModel):
+    model : str
+    temperature : float
+    top_p : float

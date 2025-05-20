@@ -1,1 +1,1 @@
-# StudyPal
+# PromptStudio
