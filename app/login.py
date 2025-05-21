@@ -1,6 +1,7 @@
 import streamlit as st
 import jwt
 import os
+import time
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -22,21 +23,38 @@ def show():
             # Decode the JWT token
             decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             email = decoded.get("sub")
-            st.session_state.email = email
-            st.success(f"✅ Logged in as: {email}")
-            if st.button("Logout"):
+            
+            if "email" not in st.session_state:
+                st.session_state.email = email
+                st.session_state.token = token
+                st.success(f"✅ Logged in as: {email}")
+                st.rerun()  # <-- This triggers rerun to load the dashboard
+
+            else:
+                st.success(f"✅ Logged in as: {email}")
+                if st.button("Logout"):
+                    st.session_state.clear()
+                    st.query_params.clear()
+                    st.rerun()
+
+        except jwt.ExpiredSignatureError:
+            st.error("❌ Token expired. Please log in again.")
+            if st.button("Try again"):
                 st.session_state.clear()
                 st.query_params.clear()
                 st.rerun()
-        except jwt.ExpiredSignatureError:
-            st.error("❌ Token expired. Please log in again.")
         except jwt.InvalidTokenError:
             st.error("❌ Invalid token. Authentication failed.")
+            if st.button("Try again"):
+                st.session_state.clear()
+                st.query_params.clear()
+                st.rerun()
+
     else:
         st.info("Please log in to continue.")
         st.markdown(
             """
-            <a href="http://localhost:8000/auth/google">
+            <a href="http://localhost:8000/auth/google" target="_self">
                 <button style='
                     background-color: #4285F4;
                     color: white;

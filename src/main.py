@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from src.routes.auth_route import router as auth_router
+from src.routes.playground_route import router as playground_router
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -18,6 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth_router)
+app.include_router(playground_router)
 
 @app.get("/", tags=['test'])
 async def root():
