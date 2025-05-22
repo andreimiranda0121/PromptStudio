@@ -16,14 +16,14 @@ def show():
     token = st.query_params.get("token")
 
     # Style
-    st.markdown("<h1>🔐 Google OAuth2 Login</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>🔐 PromptStudio Login</h1>", unsafe_allow_html=True)
 
     if token:
         try:
             # Decode the JWT token
             decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             email = decoded.get("sub")
-            
+            st.session_state.decoded = decoded
             if "email" not in st.session_state:
                 st.session_state.email = email
                 st.session_state.token = token
