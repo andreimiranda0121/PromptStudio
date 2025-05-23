@@ -13,3 +13,5 @@ def create_jwt(email: str):
         "exp": datetime.utcnow() + timedelta(minutes=1)
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+

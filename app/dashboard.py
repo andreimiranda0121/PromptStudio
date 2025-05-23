@@ -54,7 +54,9 @@ def save_settings():
 
     response = requests.post(
         url="http://localhost:8000/prompt/saved_settings/",
-        data={"model_settings": json.dumps(st.session_state.model_settings)},
+        data={
+            "email": st.session_state.email,
+            "model_settings": json.dumps(st.session_state.model_settings)},
         files=files
     )
     st.write(response)
@@ -117,6 +119,10 @@ def show():
 
     if st.session_state.show_settings:
         settings()
+    if st.session_state.load_settings:
+        st.success("✅ Previous settings loaded")
+        st.session_state.load_settings = False
+        st.session_state.chat_history = []
 
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):

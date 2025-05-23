@@ -4,6 +4,7 @@ from firebase_admin import auth as firebase_auth, credentials, initialize_app, g
 from firebase_admin.exceptions import FirebaseError
 from src.services.auth import get_google_auth_url, exchange_code_for_token, get_user_info
 from src.utils.jwt_handler import create_jwt
+from src.database.connection import get_db
 import logging
 
 logger = logging.getLogger(__name__)
