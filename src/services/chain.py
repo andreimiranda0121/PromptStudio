@@ -25,6 +25,7 @@ class Chain:
     def chain_context(self):
         model = self.select_model(self.model_settings['model'],self.model_settings['temperature'],self.model_settings['top_p'])
         context = "test"
+        
     def chain_no_context(self):
         pass
 

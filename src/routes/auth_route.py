@@ -37,6 +37,7 @@ async def google_callback(request: Request):
         user_info = await get_user_info(access_token)
 
         email = user_info.get("email")
+        name = user_info.get("name")
         if not email:
             raise HTTPException(status_code=400, detail="Email not found in user info")
 
@@ -45,7 +46,17 @@ async def google_callback(request: Request):
         except FirebaseError:
             firebase_auth.create_user(email=email)
 
-        jwt_token = create_jwt(email)
+        db = get_db()
+        users_collection = db['users']
+        existing_user = users_collection.find_one({"email": email})
+        if not existing_user:
+            users_collection.insert_one({
+                "email": email,
+                "name": name,
+                "role" : "user",
+                "auth_provider": "google",
+            })
+        jwt_token = create_jwt(email, name)
         redirect_url = f"http://localhost:8501/?token={jwt_token}"
         return RedirectResponse(redirect_url)
 

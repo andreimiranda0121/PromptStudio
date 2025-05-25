@@ -10,3 +10,4 @@ PyJWT
 chromadb
 firebase_admin
 tiktoken
+pymongo

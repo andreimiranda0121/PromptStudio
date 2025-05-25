@@ -3,7 +3,10 @@ import jwt
 import os
 import time
 from dotenv import load_dotenv
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from src.utils.jwt_handler import decode_jwt
 # Load environment variables
 load_dotenv()
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -21,11 +24,13 @@ def show():
     if token:
         try:
             # Decode the JWT token
-            decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            decoded = decode_jwt(token)
             email = decoded.get("sub")
+            name = decoded.get("name")
             st.session_state.decoded = decoded
             if "email" not in st.session_state:
                 st.session_state.email = email
+                st.session_state.name = name
                 st.session_state.token = token
                 st.success(f"✅ Logged in as: {email}")
                 st.rerun()  # <-- This triggers rerun to load the dashboard

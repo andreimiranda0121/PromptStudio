@@ -6,7 +6,6 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.services.api_request import *
 
-
 def initialize_session_state():
     # Define all required session state variables with default values
     defaults = {
@@ -26,7 +25,6 @@ def initialize_session_state():
     for key, default_value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = default_value
-
 
 initialize_session_state()
 
@@ -52,16 +50,26 @@ def save_settings():
             )
         }
 
-    response = requests.post(
-        url="http://localhost:8000/prompt/saved_settings/",
-        data={
-            "email": st.session_state.email,
-            "model_settings": json.dumps(st.session_state.model_settings)},
-        files=files
-    )
-    st.write(response)
-
-
+    try:
+        response = requests.post(
+            url="http://localhost:8000/prompt/saved_settings/",
+            data={
+                "email": st.session_state.email,
+                "model_settings": json.dumps(st.session_state.model_settings)
+            },
+            files=files
+        )
+        
+        if response.status_code == 200:
+            # Clear the sidebar cache to force reload of history
+            from sidebar import fetch_prompt_history
+            fetch_prompt_history.clear()
+            
+        else:
+            st.error(f"Failed to save settings. Status: {response.status_code}")
+            
+    except Exception as e:
+        st.error(f"Error saving settings: {str(e)}")
 
 def settings():
     with st.container():
@@ -114,24 +122,24 @@ def show():
                 help="Toggle model settings")
 
     if st.session_state.settings_saved:
-        st.success("✅ Settings saved.")
+        st.success("✅ Settings saved and history updated!")
         st.session_state.settings_saved = False
+
+    if st.session_state.load_settings:
+        st.success("✅ Load Previous Settings Successfully!")
+        st.session_state.show_settings = False
+        st.session_state.load_settings = False
+
 
     if st.session_state.show_settings:
         settings()
-    if st.session_state.load_settings:
-        st.success("✅ Previous settings loaded")
-        st.session_state.load_settings = False
-        st.session_state.chat_history = []
 
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    
     query = st.chat_input("Enter your query", max_chars=100)
     if query:
-       
         with st.chat_message("user"):
             st.markdown(query)
         st.session_state.chat_history.append({"role": "user", "content": query})
@@ -140,4 +148,3 @@ def show():
         with st.chat_message("ai"):
             st.markdown(response)
         st.session_state.chat_history.append({"role": "ai", "content": response})
-
