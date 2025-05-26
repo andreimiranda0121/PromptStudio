@@ -15,7 +15,7 @@ try:
     cred = credentials.Certificate("promptstudio-76ab4-ba16da252818.json")
     try:
         get_app()
-    except ValueError:
+    except ValueError: 
         initialize_app(cred)
 except Exception as e:
     logger.error(f"Firebase init error: {e}")

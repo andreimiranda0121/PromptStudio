@@ -35,6 +35,8 @@ def delete_prompt(email, prompt_id):
 def sidebar():
     if "load_settings" not in st.session_state:
         st.session_state.load_settings = False
+    if "delete_prompt" not in st.session_state:
+        st.session_state.delete_prompt = False
 
     with st.sidebar:
         st.markdown(f"## Welcome, {st.session_state.name}")
@@ -58,7 +60,7 @@ def sidebar():
                     st.write(f"Temperature: {entry.get('temperature', 'N/A')}")
                     st.write(f"Top-p: {entry.get('top_p', 'N/A')}")
                     st.write(f"Prompt Template: {entry.get('prompt_template', 'N/A')}")
-                    st.write(f"Use Contexxt: {entry.get('use_context', 'N/A')}")
+                    st.write(f"Use Context: {entry.get('use_context', 'N/A')}")
                     st.write(f"Timestamp: {entry.get('timestamp', 'N/A')}")
                     col1 , col2 = st.columns(2)
                     with col1:
@@ -71,11 +73,12 @@ def sidebar():
                                 "prompt_template": entry.get('prompt_template', 'N/A'),
                                 "use_context": entry.get('use_context', 'N/A'),
                             }
+                            st.session_state.prompt_id = entry.get('prompt_id', 'N/A')
                             st.session_state.chat_history = []
                             st.rerun()
                     with col2:
                         if st.button(label="Delete", key=f"delete{i+1}"):
-                            st.write(entry.get('prompt_id', 'N/A'))
+                            st.session_state.delete_prompt = True
                             delete_prompt(st.session_state.email, entry.get('prompt_id', 'N/A'))
                             fetch_prompt_history.clear()  # Correct way to invalidate cache
                             st.rerun()

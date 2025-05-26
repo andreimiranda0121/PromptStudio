@@ -1,3 +1,5 @@
+import os
+import tempfile
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from typing import Optional
 from src.database.connection import get_db
@@ -13,14 +15,46 @@ router = APIRouter(
 )
 
 @router.post("/chat_request/")
-async def chat_request(prompt_settings: PromptSetting):
-    pass
+async def chat_request(
+    prompt_settings: str = Form(...), 
+    file: Optional[UploadFile] = File(None)
+):
+    try:
+        settings_dict = json.loads(prompt_settings)
+
+        # Save uploaded file if provided
+        if file:
+            suffix = os.path.splitext(file.filename)[1]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(await file.read())
+                tmp_file_path = tmp.name
+            settings_dict['file_path'] = tmp_file_path
+        else:
+            tmp_file_path = None
+
+        # Create and run the chain
+        chain = Chain(settings_dict)
+        user_input = settings_dict.get("input", "")
+        if not user_input:
+            raise HTTPException(status_code=400, detail="user_input is required")
+        
+        response = chain.run(user_input)
+
+        # Cleanup file
+        if tmp_file_path and os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
+
+
 # Save settings to prompt history collection
 @router.post("/saved_settings/")
 async def save_settings(
     email: str = Form(...),
     model_settings: str = Form(...),
-    file: Optional[UploadFile] = File(None)
 ):
     db = get_db()
     collection = db['prompt_history']
@@ -32,7 +66,6 @@ async def save_settings(
 
     # Add timestamp to entry
     parsed_settings["timestamp"] = datetime.utcnow().isoformat()
-    parsed_settings["prompt_id"] = str(uuid.uuid4())
     # Check if the user already has a history document
     user_doc = collection.find_one({"email": email})
     if not user_doc:
@@ -45,11 +78,6 @@ async def save_settings(
             {"email": email},
             {"$push": {"prompt_history": parsed_settings}}
         )
-
-    # Handle optional file (optional step)
-    if file:
-        contents = await file.read()
-        print(f"Received file: {file.filename} ({len(contents)} bytes)")
 
     return {"status": "saved"}
 

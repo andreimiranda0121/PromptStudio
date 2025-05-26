@@ -1,3 +1,4 @@
 .env
 __pycache__
 promptstudio-76ab4-ba16da252818.json
+src/database/chroma_db
