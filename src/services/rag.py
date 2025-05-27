@@ -1,6 +1,6 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain.document_loaders import CSVLoader,PyMuPDFLoader
+from langchain.document_loaders import CSVLoader,PyMuPDFLoader, TextLoader, UnstructuredExcelLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
@@ -33,26 +33,34 @@ class VectorStore:
             )
 
     def split_docs(self):
-            if os.path.exists(self.file_path):
-                ext = os.path.splitext(self.file_path)[-1].lower()
-                if ext == ".csv":
-                    print("Loading the CSV File")
-                    loader = CSVLoader(self.file_path)
-                elif ext in [".pdf"]:
-                    print("Loading the PDF File")
-                    loader = PyMuPDFLoader(self.file_path)
-                else:
-                    raise ValueError(f"Unsupported file type: {ext}")
+        if os.path.exists(self.file_path):
+            ext = os.path.splitext(self.file_path)[-1].lower()
 
-                docs = loader.load()
-                print("Splitting text into chunks...")
-                text_splitter = RecursiveCharacterTextSplitter(
-                    chunk_overlap=200,
-                    chunk_size=1500
-                )
-                return text_splitter.split_documents(docs)
+            if ext == ".csv":
+                print("Loading the CSV file")
+                loader = CSVLoader(self.file_path)
+            elif ext == ".pdf":
+                print("Loading the PDF file")
+                loader = PyMuPDFLoader(self.file_path)
+            elif ext == ".txt":
+                print("Loading the TXT file")
+                loader = TextLoader(self.file_path)
+            elif ext == ".xlsx":
+                print("Loading the Excel file")
+                loader = UnstructuredExcelLoader(self.file_path)
             else:
-                raise FileNotFoundError(f"The file does not exist: {self.file_path}")
+                raise ValueError(f"Unsupported file type: {ext}")
+
+            docs = loader.load()
+            print("Splitting text into chunks...")
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_overlap=200,
+                chunk_size=1500
+            )
+            return text_splitter.split_documents(docs)
+
+        else:
+            raise FileNotFoundError(f"The file does not exist: {self.file_path}")
 
     def create_vector_store(self):
         if not os.path.exists(self.persistent_directory):

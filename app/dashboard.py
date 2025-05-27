@@ -21,7 +21,7 @@ def initialize_session_state():
         "use_context": "No",
         "uploaded_file": None,
         "prompt_template": "You're an intelligent assistant that can answer users questions",
-        "prompt_id": "",
+        "prompt_id": st.session_state.get("prompt_id", ""),
         "model_settings": {}
     }
     
@@ -33,20 +33,38 @@ def initialize_session_state():
 initialize_session_state()
 
 def save_settings():
+    has_error = False
+
+    if st.session_state.use_context == "Yes":
+        if "{context}" not in st.session_state.prompt_template:
+            st.error("⚠️ Since you selected to use context, please include `{context}` in your prompt template.")
+            has_error = True
+        if "uploaded_file" not in st.session_state or st.session_state.uploaded_file is None:
+            st.error("⚠️ You must upload a file when using context.")
+            has_error = True
+
+    if st.session_state.use_context == "No" and "{context}" in st.session_state.prompt_template:
+        st.error("⚠️ You selected not to use context, so `{context}` should not be in your prompt template.")
+        has_error = True
+
+    if has_error:
+        return  
+
     prompt_id = str(uuid.uuid4())
+    st.session_state.prompt_id = prompt_id
+
     st.session_state.model_settings = {
         "model": st.session_state.model,
         "temperature": st.session_state.temperature,
         "top_p": st.session_state.top_p,
         "prompt_template": st.session_state.prompt_template,
         "use_context": st.session_state.use_context,
-        "prompt_id" :  prompt_id
+        "prompt_id": prompt_id,
     }
 
     st.session_state.show_settings = False
     st.session_state.settings_saved = True
     st.session_state.chat_history = []
-    
 
     try:
         response = requests.post(
@@ -56,36 +74,65 @@ def save_settings():
                 "model_settings": json.dumps(st.session_state.model_settings)
             }
         )
-        
+
         if response.status_code == 200:
-            # Clear the sidebar cache to force reload of history
             fetch_prompt_history.clear()
-            
         else:
-            st.error(f"Failed to save settings. Status: {response.status_code}")
-            
+            st.error(f"❌ Failed to save settings. Status: {response.status_code}")
+
     except Exception as e:
-        st.error(f"Error saving settings: {str(e)}")
+        st.error(f"❌ Error saving settings: {str(e)}")
+
+
 
 def settings():
     with st.container():
-        st.selectbox("Select Model", options=['gpt-4o', 'gemini-2.0-flash'], key="model")
-        st.slider("Temperature", 0.0, 1.0, 0.3, 0.1, key="temperature")
-        st.slider("Top-p", 0.0, 1.0, 0.7, 0.1, key="top_p")
+        st.selectbox(
+            "Select Model", 
+            options=[
+                'gpt-4o', 
+                'gpt-3.5-turbo',
+                'gemini-2.0-flash',
+                'gemini-2.0-flash-lite',
+                'gemini-2.5-flash'
+            ], 
+            key="model"
+        )
+
+
+        st.slider(
+            "Temperature",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.3,
+            step=0.1,
+            key="temperature",
+            help="Controls randomness. Lower values make output more focused and deterministic."
+        )
+
+        st.slider(
+            "Top-p",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.7,
+            step=0.1,
+            key="top_p",
+            help="Controls diversity via nucleus sampling. Lower values narrow down the vocabulary used."
+        )
+
         st.text_area(
             "Input your prompt template",
             max_chars=500,
             key="prompt_template",
             value=st.session_state.prompt_template,
             height=200,
-            help="Use {input} for user input and {context} for context (if any)."
+            help="Use {context} for contextual input (e.g., from uploaded documents)."
         )
 
-        # Use context toggle
         st.radio("Use context from uploaded file?", ["No", "Yes"], key="use_context", horizontal=True)
 
         if st.session_state.use_context == "Yes":
-            uploaded_file = st.file_uploader("Upload PDF for context", type=["pdf"])
+            uploaded_file = st.file_uploader("Upload PDF for context", type=["pdf", "csv" , "xslx", "txt"])
             if uploaded_file:
                 st.session_state.uploaded_file = uploaded_file
 
@@ -95,6 +142,7 @@ def settings():
                 st.info("📄 No file uploaded for this session.")
 
         st.button("Save Settings", on_click=save_settings)
+
 
 def toggle_settings():
     st.session_state.show_settings = not st.session_state.show_settings
@@ -151,9 +199,11 @@ def show():
         with st.chat_message("user"):
             st.markdown(query)
         st.session_state.chat_history.append({"role": "user", "content": query})
+
         if not st.session_state.model_settings:
             st.error("⚠️ Please save your settings before sending a query.")
             return
+
         response = chat_request(
             st.session_state.email,
             st.session_state.prompt_id,
@@ -165,8 +215,24 @@ def show():
             query,
             files
         )
+
         with st.chat_message("ai"):
-            st.markdown(response)
-            with st.expander(label="Settings"):
-                st.write(st.session_state.model_settings['prompt_template'])
-        st.session_state.chat_history.append({"role": "ai", "content": response})
+            if isinstance(response, dict) and response.get("error"):
+                st.error("❌ Failed to get a response from the model. Please try again.")
+            else:
+                st.markdown(response['response'])
+                with st.expander(label="Settings"):
+                    st.markdown(f"**Model:** `{st.session_state.model_settings.get('model', '-')}`")
+                    st.markdown(f"**Temperature:** `{st.session_state.model_settings.get('temperature', '-')}`")
+                    st.markdown(f"**Top-p:** `{st.session_state.model_settings.get('top_p', '-')}`")
+                    st.markdown(f"**Use Context:** `{st.session_state.model_settings.get('use_context', '-')}`")
+                    st.markdown(f"**Prompt ID:** `{st.session_state.model_settings.get('prompt_id', '-')}`")
+                    st.markdown("**Prompt Template:**")
+                    st.code(st.session_state.model_settings.get('prompt_template', ''), language='markdown')
+
+
+        st.session_state.chat_history.append({
+            "role": "ai",
+            "content": response.get("response") if isinstance(response, dict) and "response" in response else response.get("message", "❌ Error occurred.")
+        })
+

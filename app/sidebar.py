@@ -17,6 +17,12 @@ def fetch_prompt_history(email):
         print(f"Error loading history: {e}")
         return []
 def delete_prompt(email, prompt_id):
+    if prompt_id == st.session_state.get("prompt_id"):
+        st.error("⚠️ You cannot delete a prompt that is currently in use.")
+        st.session_state.delete_prompt = False
+        return
+    else:
+        st.session_state.delete_prompt = True
     try:
         response = requests.delete(
             url= "http://localhost:8000/prompt/delete_prompt/",
@@ -37,16 +43,19 @@ def sidebar():
         st.session_state.load_settings = False
     if "delete_prompt" not in st.session_state:
         st.session_state.delete_prompt = False
-
+    if "name" not in st.session_state:
+        st.session_state.name = ""
     with st.sidebar:
-        st.markdown(f"## Welcome, {st.session_state.name}")
+        st.markdown(f"### 👋 Welcome, **{st.session_state.name}**")
 
+        st.markdown("---")
+        
         if st.button("🚪 Logout"):
             st.session_state.clear()
             st.query_params.clear()
             st.rerun()
 
-        st.title('Prompt History')
+        st.markdown("### 🕘 Prompt History")
 
         # Load history only once per session (cached)
         history = fetch_prompt_history(st.session_state.email)
@@ -54,14 +63,21 @@ def sidebar():
         if history:
             # Show latest 5 (most recent first)
             for i, entry in enumerate(reversed(history[::-1])):
-                with st.expander(label=f"Prompt {i + 1} - {entry.get('timestamp', 'Unknown')[:19]}"):
-                    st.write("Model Settings:")
-                    st.write(f"Model Name: {entry.get('model', 'N/A')}")
-                    st.write(f"Temperature: {entry.get('temperature', 'N/A')}")
-                    st.write(f"Top-p: {entry.get('top_p', 'N/A')}")
-                    st.write(f"Prompt Template: {entry.get('prompt_template', 'N/A')}")
-                    st.write(f"Use Context: {entry.get('use_context', 'N/A')}")
-                    st.write(f"Timestamp: {entry.get('timestamp', 'N/A')}")
+                with st.expander(label=f"📝 Prompt {i + 1} - {entry.get('timestamp', 'Unknown')[:19]}"):
+                    st.markdown("### 📌 Prompt Settings")
+                    
+                    st.markdown(f"""
+                    - **🧠 Model Name:** `{entry.get('model', 'N/A')}`
+                    - **🔥 Temperature:** `{entry.get('temperature', 'N/A')}`
+                    - **🎯 Top-p:** `{entry.get('top_p', 'N/A')}`
+                    - **📄 Use Context:** `{entry.get('use_context', 'N/A')}`
+                    - **🆔 Prompt ID:** `{entry.get('prompt_id', 'N/A')}`
+                    - **🕒 Timestamp:** `{entry.get('timestamp', 'N/A')}`
+                    """)
+
+                    st.markdown("**📝 Prompt Template:**")
+                    st.code(entry.get('prompt_template', 'N/A'), language="text")
+
                     col1 , col2 = st.columns(2)
                     with col1:
                         if st.button(label="Load", key=f"load{i + 1}"):
