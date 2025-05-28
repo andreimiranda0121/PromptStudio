@@ -151,41 +151,49 @@ def toggle_settings():
             st.session_state[key] = value
 
 def show():
-    # Re-initialize session state to ensure it exists
     initialize_session_state()
     
-    col1, col2 = st.columns([9, 1])
-    with col1:
-        st.title("PromptStudio")
-    with col2:
-        # Use on_change for the toggle to update state directly
-        st.toggle("⚙️", 
-                value=st.session_state.show_settings, 
-                key="toggle_settings", 
-                on_change=toggle_settings,
-                help="Toggle model settings")
+    with st.container():
+        col1, col2 = st.columns([10, 1])
+        with col1:
+            st.markdown("## 💬 PromptStudio")
+        with col2:
+            st.toggle("⚙️", 
+                      value=st.session_state.show_settings, 
+                      key="toggle_settings", 
+                      on_change=toggle_settings,
+                      help="Toggle model settings")
 
+    # Feedback banners
     if st.session_state.settings_saved:
         st.success("✅ Settings saved and history updated!")
         st.session_state.settings_saved = False
 
-    if st.session_state.load_settings:
-        st.success("✅ Load Previous Settings Successfully!")
+    if st.session_state.get("load_settings", False):
+        st.success("✅ Loaded previous settings successfully!")
         st.session_state.show_settings = False
         st.session_state.load_settings = False
 
-    if st.session_state.delete_prompt:
-        st.success("✅ Delete Prompt Successfully")
+    if st.session_state.get("delete_prompt", False):
+        st.success("🗑️ Prompt deleted successfully.")
         st.session_state.chat_history = []
         st.session_state.delete_prompt = False
-    if st.session_state.show_settings:
-        settings()
 
+    # Show settings section
+    if st.session_state.show_settings:
+        st.markdown("---")
+        with st.expander("🔧 Advanced Settings", expanded=True):
+            settings()
+        st.markdown("---")
+
+    # Display chat history
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    query = st.chat_input("Enter your query", max_chars=100)
+    query = st.chat_input("💬 Enter your prompt here", max_chars=100)
+
+    # Prepare files if uploaded
     files = None
     if st.session_state.uploaded_file:
         files = {
@@ -195,6 +203,8 @@ def show():
                 st.session_state.uploaded_file.type
             )
         }
+
+    # If user submits a query
     if query:
         with st.chat_message("user"):
             st.markdown(query)
@@ -204,35 +214,37 @@ def show():
             st.error("⚠️ Please save your settings before sending a query.")
             return
 
-        response = chat_request(
-            st.session_state.email,
-            st.session_state.prompt_id,
-            st.session_state.model_settings['model'],
-            st.session_state.model_settings['temperature'],
-            st.session_state.model_settings['top_p'],
-            st.session_state.model_settings['prompt_template'],
-            st.session_state.model_settings['use_context'],
-            query,
-            files
-        )
-
         with st.chat_message("ai"):
+            with st.spinner("🤖 Thinking... generating response..."):
+                response = chat_request(
+                    st.session_state.email,
+                    st.session_state.prompt_id,
+                    st.session_state.model_settings['model'],
+                    st.session_state.model_settings['temperature'],
+                    st.session_state.model_settings['top_p'],
+                    st.session_state.model_settings['prompt_template'],
+                    st.session_state.model_settings['use_context'],
+                    query,
+                    files
+                )
+
+            # Show the model response
             if isinstance(response, dict) and response.get("error"):
                 st.error("❌ Failed to get a response from the model. Please try again.")
             else:
                 st.markdown(response['response'])
-                with st.expander(label="Settings"):
+                with st.expander("🛠️ Model Settings"):
                     st.markdown(f"**Model:** `{st.session_state.model_settings.get('model', '-')}`")
                     st.markdown(f"**Temperature:** `{st.session_state.model_settings.get('temperature', '-')}`")
                     st.markdown(f"**Top-p:** `{st.session_state.model_settings.get('top_p', '-')}`")
                     st.markdown(f"**Use Context:** `{st.session_state.model_settings.get('use_context', '-')}`")
-                    st.markdown(f"**Prompt ID:** `{st.session_state.model_settings.get('prompt_id', '-')}`")
+                    st.markdown(f"**Prompt ID:** `{st.session_state.get('prompt_id', '-')}`")
                     st.markdown("**Prompt Template:**")
                     st.code(st.session_state.model_settings.get('prompt_template', ''), language='markdown')
 
+            st.session_state.chat_history.append({
+                "role": "ai",
+                "content": response.get("response") if isinstance(response, dict) and "response" in response else response.get("message", "❌ Error occurred.")
+            })
 
-        st.session_state.chat_history.append({
-            "role": "ai",
-            "content": response.get("response") if isinstance(response, dict) and "response" in response else response.get("message", "❌ Error occurred.")
-        })
 
