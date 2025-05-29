@@ -6,7 +6,7 @@ from src.database.connection import get_db
 from src.services.chain import Chain
 from src.models.model import PromptSetting
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import uuid
 
 router = APIRouter(
@@ -65,7 +65,8 @@ async def save_settings(
         raise HTTPException(status_code=400, detail="Invalid model_settings JSON")
 
     # Add timestamp to entry
-    parsed_settings["timestamp"] = datetime.utcnow().isoformat()
+    gmt_plus_8 = timezone(timedelta(hours=8))
+    parsed_settings["timestamp"] = datetime.now(gmt_plus_8).isoformat()
     # Check if the user already has a history document
     user_doc = collection.find_one({"email": email})
     if not user_doc:

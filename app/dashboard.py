@@ -94,7 +94,6 @@ def settings():
                 'gpt-3.5-turbo',
                 'gemini-2.0-flash',
                 'gemini-2.0-flash-lite',
-                'gemini-2.5-flash'
             ], 
             key="model"
         )
@@ -213,7 +212,9 @@ def show():
         if not st.session_state.model_settings:
             st.error("⚠️ Please save your settings before sending a query.")
             return
-
+        if st.session_state.model_settings['use_context'] == "Yes" and not st.session_state.get("uploaded_file"):
+            st.error("⚠️ Please upload a document before sending a query.")
+            return
         with st.chat_message("ai"):
             with st.spinner("🤖 Thinking... generating response..."):
                 response = chat_request(

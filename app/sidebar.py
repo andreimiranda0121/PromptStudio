@@ -62,7 +62,7 @@ def sidebar():
         
         if history:
             # Show latest 5 (most recent first)
-            for i, entry in enumerate(reversed(history[::-1])):
+            for i, entry in enumerate(history[::-1]):
                 with st.expander(label=f"📝 Prompt {i + 1} - {entry.get('timestamp', 'Unknown')[:19]}"):
                     st.markdown("### 📌 Prompt Settings")
                     
