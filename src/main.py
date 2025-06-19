@@ -6,7 +6,7 @@ import uvicorn
 
 app = FastAPI(
     title="PromptStudio",
-    description="Students upload textbooks, notes, and get flashcards, quizzes, or summaries.",
+    description="User will create their own customizable prompt settings and model settings",
     version="1.0.0"
 )
 
@@ -23,7 +23,7 @@ app.include_router(playground_router)
 
 @app.get("/", tags=['test'])
 async def root():
-    return {"message": "Hello Welcome to the StudyPal"}
+    return {"message": "Hello Welcome to the PromptStudio"}
 
 if __name__ == "__main__":
     uvicorn.run("src.main:app", host="localhost", port=8000, reload=True)
